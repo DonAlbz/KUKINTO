@@ -1,0 +1,139 @@
+/* ============================
+   BASE GLOBALE
+============================ */
+body {
+    margin: 0;
+    background: #0a0f1f;
+    color: #e6f1ff;
+    font-family: "Segoe UI", Arial, sans-serif;
+    overflow-x: hidden;
+}
+
+/* Pattern dots animato */
+body::before {
+    content: "";
+    position: fixed;
+    inset: 0;
+    background-image: radial-gradient(#00eaff22 1px, transparent 1px);
+    background-size: 22px 22px;
+    opacity: 0.25;
+    animation: dotsMove 18s linear infinite;
+    pointer-events: none;
+}
+
+@keyframes dotsMove {
+    from { transform: translateY(0); }
+    to { transform: translateY(-180px); }
+}
+
+/* ============================
+   TITOLI
+============================ */
+h1, h2, h3 {
+    color: #00eaff;
+    letter-spacing: 0.5px;
+}
+
+/* ============================
+   PULSANTI TECH
+============================ */
+.btn {
+    display: inline-block;
+    padding: 12px 26px;
+    margin: 10px 12px 0 0;
+    border: 1px solid #00eaff;
+    color: #00eaff;
+    border-radius: 4px;
+    text-decoration: none;
+    font-weight: 500;
+    letter-spacing: 0.5px;
+    font-size: 16px;
+    transition: 0.25s ease;
+    background: rgba(0, 234, 255, 0.04);
+}
+
+.btn:hover {
+    background: rgba(0, 234, 255, 0.12);
+    box-shadow: 0 0 10px #00eaff55;
+    transform: translateY(-2px);
+}
+
+/* ============================
+   CONTAINER / CARD TECH
+============================ */
+.card, section, .box {
+    width: 90%;
+    margin: 40px auto;
+    padding: 40px;
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid #00eaff33;
+    border-radius: 12px;
+}
+
+/* ============================
+   FORM
+============================ */
+input, select, textarea {
+    width: 100%;
+    padding: 12px;
+    margin: 10px 0 20px;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid #00eaff44;
+    border-radius: 6px;
+    color: #e6f1ff;
+    font-size: 16px;
+}
+
+input:focus, select:focus, textarea:focus {
+    outline: none;
+    border-color: #00eaff;
+    box-shadow: 0 0 8px #00eaff55;
+}
+
+/* ============================
+   TABELLE
+============================ */
+table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 20px;
+}
+
+th {
+    background: rgba(0, 234, 255, 0.12);
+    color: #00eaff;
+    padding: 12px;
+    border-bottom: 1px solid #00eaff55;
+}
+
+td {
+    padding: 12px;
+    border-bottom: 1px solid #00eaff22;
+}
+
+tr:hover {
+    background: rgba(0, 234, 255, 0.05);
+}
+
+/* ============================
+   LINK
+============================ */
+a {
+    color: #00eaff;
+    text-decoration: none;
+}
+
+a:hover {
+    text-shadow: 0 0 6px #00eaff;
+}
+
+/* ============================
+   MESSAGGI
+============================ */
+.success {
+    color: #00ffbf;
+}
+
+.error {
+    color: #ff4d4d;
+}
