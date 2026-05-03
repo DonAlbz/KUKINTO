@@ -2,28 +2,36 @@
 if (session_status() === PHP_SESSION_NONE) { session_start(); }
 require_once 'config.php';
 
-if (isset($_SESSION['customer_id'])) {
-    header("Location: customer_dashboard.php");
+if (isset($_SESSION['operator_id'])) {
+    header("Location: operatore_dashboard.php");
     exit;
 }
 
 $message = "";
+$success = false;
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    $name     = trim($_POST['name']);
     $username = trim($_POST['username']);
+    $email    = trim($_POST['email']);
     $password = trim($_POST['password']);
+    $confirm  = trim($_POST['confirm']);
 
-    $stmt = $pdo->prepare("SELECT * FROM customers WHERE username = :u LIMIT 1");
-    $stmt->execute([':u' => $username]);
-    $customer = $stmt->fetch(PDO::FETCH_ASSOC);
-
-    if ($customer && password_verify($password, $customer['password_hash'])) {
-        $_SESSION['customer_id']       = $customer['id'];
-        $_SESSION['customer_username'] = $customer['username'];
-        header("Location: customer_dashboard.php");
-        exit;
+    if ($password !== $confirm) {
+        $message = "Le password non coincidono.";
     } else {
-        $message = "Credenziali errate.";
+        try {
+            $hash = password_hash($password, PASSWORD_DEFAULT);
+            $stmt = $pdo->prepare("
+                INSERT INTO users (name, username, email, password_hash, role)
+                VALUES (:n, :u, :e, :p, 'operatore')
+            ");
+            $stmt->execute([':n' => $name, ':u' => $username, ':e' => $email, ':p' => $hash]);
+            $success = true;
+            $message = "Registrazione completata! Puoi ora accedere.";
+        } catch (PDOException $e) {
+            $message = "Username o email già esistenti.";
+        }
     }
 }
 ?>
@@ -31,7 +39,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 <html lang="it">
 <head>
 <meta charset="UTF-8">
-<title>Login Cliente — DroneDelivery</title>
+<title>Registrazione Operatore — DroneDelivery</title>
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <style>
 * { box-sizing:border-box; margin:0; padding:0; }
@@ -49,7 +57,7 @@ body::before {
 }
 .card {
     background:rgba(255,255,255,0.03); border:1px solid rgba(0,234,255,0.15);
-    border-radius:20px; padding:40px 36px; width:100%; max-width:400px;
+    border-radius:20px; padding:40px 36px; width:100%; max-width:420px;
     box-shadow:0 0 60px rgba(0,234,255,0.07);
 }
 .logo { display:flex; align-items:center; gap:10px; margin-bottom:28px; }
@@ -66,17 +74,18 @@ body::before {
 }
 .field input:focus { border-color:rgba(0,234,255,0.5); background:rgba(0,234,255,0.04); box-shadow:0 0 0 3px rgba(0,234,255,0.08); }
 .field input::placeholder { color:#3a5570; }
-.btn-login {
+.btn-register {
     width:100%; padding:12px; background:rgba(0,234,255,0.1); border:1px solid rgba(0,234,255,0.35);
     border-radius:10px; color:#00eaff; font-size:14px; font-weight:600; cursor:pointer; transition:0.2s; margin-top:8px;
 }
-.btn-login:hover { background:rgba(0,234,255,0.18); box-shadow:0 0 20px rgba(0,234,255,0.15); }
-.error { margin-top:14px; padding:10px 14px; background:rgba(255,82,82,0.08); border:1px solid rgba(255,82,82,0.2); border-radius:8px; color:#ff7070; font-size:13px; text-align:center; }
+.btn-register:hover { background:rgba(0,234,255,0.18); box-shadow:0 0 20px rgba(0,234,255,0.15); }
+.error   { margin-top:14px; padding:10px 14px; background:rgba(255,82,82,0.08); border:1px solid rgba(255,82,82,0.2); border-radius:8px; color:#ff7070; font-size:13px; text-align:center; }
+.success { margin-top:14px; padding:10px 14px; background:rgba(0,230,118,0.08); border:1px solid rgba(0,230,118,0.2); border-radius:8px; color:#00e676; font-size:13px; text-align:center; }
 .divider { display:flex; align-items:center; gap:10px; margin:20px 0; color:#2a3f55; font-size:12px; }
 .divider::before, .divider::after { content:''; flex:1; height:1px; background:rgba(0,234,255,0.08); }
-.signup-link { text-align:center; font-size:13px; color:#5a7a99; }
-.signup-link a { color:#00eaff; text-decoration:none; font-weight:500; }
-.signup-link a:hover { text-decoration:underline; }
+.login-link { text-align:center; font-size:13px; color:#5a7a99; }
+.login-link a { color:#00eaff; text-decoration:none; font-weight:500; }
+.login-link a:hover { text-decoration:underline; }
 </style>
 </head>
 <body>
@@ -85,34 +94,44 @@ body::before {
         <div class="logo-icon">🚁</div>
         <div>
             <div class="logo-text">DroneDelivery</div>
-            <div class="logo-sub">Area Cliente</div>
+            <div class="logo-sub">Pannello Operatore</div>
         </div>
     </div>
-    <div class="title">Bentornato</div>
-    <div class="subtitle">Accedi al tuo account cliente</div>
+    <div class="title">Crea un account</div>
+    <div class="subtitle">Registrati come operatore DroneDelivery</div>
     <form method="POST">
         <div class="field">
+            <label>Nome completo</label>
+            <input type="text" name="name" placeholder="Mario Rossi" required
+                   value="<?= htmlspecialchars($_POST['name'] ?? '') ?>">
+        </div>
+        <div class="field">
             <label>Username</label>
-            <input type="text" name="username" placeholder="Il tuo username" required
+            <input type="text" name="username" placeholder="Scegli un username" required
                    value="<?= htmlspecialchars($_POST['username'] ?? '') ?>">
+        </div>
+        <div class="field">
+            <label>Email</label>
+            <input type="email" name="email" placeholder="La tua email" required
+                   value="<?= htmlspecialchars($_POST['email'] ?? '') ?>">
         </div>
         <div class="field">
             <label>Password</label>
             <input type="password" name="password" placeholder="••••••••" required>
         </div>
-        <button type="submit" class="btn-login">Accedi</button>
+        <div class="field">
+            <label>Conferma password</label>
+            <input type="password" name="confirm" placeholder="••••••••" required>
+        </div>
+        <button type="submit" class="btn-register">Registrati</button>
     </form>
     <?php if (!empty($message)): ?>
-        <div class="error"><?= htmlspecialchars($message) ?></div>
+        <div class="<?= $success ? 'success' : 'error' ?>"><?= htmlspecialchars($message) ?></div>
     <?php endif; ?>
     <div class="divider">oppure</div>
-    <div class="signup-link">
-        Non hai un account? <a href="signup_customer.php">Registrati</a>
+    <div class="login-link">
+        Hai già un account? <a href="login_operatore.php">Accedi</a>
     </div>
 </div>
 </body>
 </html>
-
-
-
-

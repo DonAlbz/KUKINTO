@@ -1,40 +1,31 @@
 <?php
-if (session_status() === PHP_SESSION_NONE) { session_start(); }
 require_once 'config.php';
 
-if (isset($_SESSION['customer_id'])) {
-    header("Location: customer_dashboard.php");
+if (session_status() === PHP_SESSION_NONE) { session_start(); }
+
+if (isset($_SESSION['operator_id'])) {
+    header("Location: operatore_dashboard.php");
     exit;
 }
 
 $message = "";
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-
     $username = trim($_POST['username']);
-    $email    = trim($_POST['email']);
     $password = trim($_POST['password']);
-    $confirm  = trim($_POST['confirm']);
 
-    if ($password !== $confirm) {
-        $message = "Le password non coincidono.";
+    $stmt = $pdo->prepare("SELECT * FROM users WHERE username = :u LIMIT 1");
+    $stmt->execute([':u' => $username]);
+    $user = $stmt->fetch(PDO::FETCH_ASSOC);
+
+    if ($user && password_verify($password, $user['password_hash']) && in_array($user['role'], ['operatore', 'admin'])) {
+        $_SESSION['operator_id'] = $user['id'];
+        $_SESSION['username']    = $user['username'];
+        $_SESSION['role']        = $user['role'];
+        header("Location: operatore_dashboard.php");
+        exit;
     } else {
-        $stmt = $pdo->prepare("SELECT id FROM customers WHERE username = :u OR email = :e LIMIT 1");
-        $stmt->execute([':u' => $username, ':e' => $email]);
-
-        if ($stmt->fetch()) {
-            $message = "Username o email già esistenti.";
-        } else {
-            $hash = password_hash($password, PASSWORD_DEFAULT);
-            $stmt = $pdo->prepare("INSERT INTO customers (username, email, password_hash) VALUES (:u, :e, :p)");
-            $stmt->execute([':u' => $username, ':e' => $email, ':p' => $hash]);
-
-            $_SESSION['customer_id']       = $pdo->lastInsertId();
-            $_SESSION['customer_username'] = $username;
-
-            header("Location: customer_dashboard.php");
-            exit;
-        }
+        $message = "Credenziali errate o ruolo non autorizzato.";
     }
 }
 ?>
@@ -42,7 +33,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 <html lang="it">
 <head>
 <meta charset="UTF-8">
-<title>Registrazione Cliente — DroneDelivery</title>
+<title>Login Operatore</title>
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <style>
 * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -55,6 +46,8 @@ body {
     align-items: center;
     justify-content: center;
 }
+
+/* SFONDO ANIMATO */
 body::before {
     content: '';
     position: fixed;
@@ -64,15 +57,18 @@ body::before {
         radial-gradient(ellipse at 80% 20%, rgba(100,60,255,0.06) 0%, transparent 60%);
     pointer-events: none;
 }
+
 .card {
     background: rgba(255,255,255,0.03);
     border: 1px solid rgba(0,234,255,0.15);
     border-radius: 20px;
     padding: 40px 36px;
     width: 100%;
-    max-width: 420px;
+    max-width: 400px;
     box-shadow: 0 0 60px rgba(0,234,255,0.07);
 }
+
+/* LOGO */
 .logo {
     display: flex;
     align-items: center;
@@ -89,9 +85,12 @@ body::before {
 }
 .logo-text { font-size: 16px; font-weight: 600; color: #e6f1ff; }
 .logo-sub  { font-size: 12px; color: #5a7a99; }
-.title    { font-size: 20px; font-weight: 600; color: #00eaff; margin-bottom: 6px; }
+
+.title { font-size: 20px; font-weight: 600; color: #00eaff; margin-bottom: 6px; }
 .subtitle { font-size: 13px; color: #5a7a99; margin-bottom: 28px; }
-.field { margin-bottom: 14px; }
+
+/* FORM */
+.field { margin-bottom: 16px; }
 .field label { display: block; font-size: 12px; color: #5a7a99; margin-bottom: 6px; letter-spacing: 0.5px; text-transform: uppercase; }
 .field input {
     width: 100%;
@@ -110,7 +109,8 @@ body::before {
     box-shadow: 0 0 0 3px rgba(0,234,255,0.08);
 }
 .field input::placeholder { color: #3a5570; }
-.btn-register {
+
+.btn-login {
     width: 100%;
     padding: 12px;
     background: rgba(0,234,255,0.1);
@@ -124,10 +124,11 @@ body::before {
     margin-top: 8px;
     letter-spacing: 0.3px;
 }
-.btn-register:hover {
+.btn-login:hover {
     background: rgba(0,234,255,0.18);
     box-shadow: 0 0 20px rgba(0,234,255,0.15);
 }
+
 .error {
     margin-top: 14px;
     padding: 10px 14px;
@@ -138,6 +139,7 @@ body::before {
     font-size: 13px;
     text-align: center;
 }
+
 .divider {
     display: flex;
     align-items: center;
@@ -152,17 +154,18 @@ body::before {
     height: 1px;
     background: rgba(0,234,255,0.08);
 }
-.login-link {
+
+.signup-link {
     text-align: center;
     font-size: 13px;
     color: #5a7a99;
 }
-.login-link a {
+.signup-link a {
     color: #00eaff;
     text-decoration: none;
     font-weight: 500;
 }
-.login-link a:hover { text-decoration: underline; }
+.signup-link a:hover { text-decoration: underline; }
 </style>
 </head>
 <body>
@@ -171,33 +174,24 @@ body::before {
         <div class="logo-icon">🚁</div>
         <div>
             <div class="logo-text">DroneDelivery</div>
-            <div class="logo-sub">Area Cliente</div>
+            <div class="logo-sub">Pannello Operatore</div>
         </div>
     </div>
 
-    <div class="title">Crea un account</div>
-    <div class="subtitle">Registrati e ricevi il tuo primo ordine in 15 minuti</div>
+    <div class="title">Bentornato</div>
+    <div class="subtitle">Accedi al tuo account operatore</div>
 
     <form method="POST">
         <div class="field">
             <label>Username</label>
-            <input type="text" name="username" placeholder="Scegli un username" required
+            <input type="text" name="username" placeholder="Il tuo username" required
                    value="<?= htmlspecialchars($_POST['username'] ?? '') ?>">
-        </div>
-        <div class="field">
-            <label>Email</label>
-            <input type="email" name="email" placeholder="La tua email" required
-                   value="<?= htmlspecialchars($_POST['email'] ?? '') ?>">
         </div>
         <div class="field">
             <label>Password</label>
             <input type="password" name="password" placeholder="••••••••" required>
         </div>
-        <div class="field">
-            <label>Conferma password</label>
-            <input type="password" name="confirm" placeholder="••••••••" required>
-        </div>
-        <button type="submit" class="btn-register">Registrati</button>
+        <button type="submit" class="btn-login">Accedi</button>
     </form>
 
     <?php if (!empty($message)): ?>
@@ -206,9 +200,14 @@ body::before {
 
     <div class="divider">oppure</div>
 
-    <div class="login-link">
-        Hai già un account? <a href="login_customer.php">Accedi</a>
+    <div class="signup-link">
+        Non hai un account? <a href="signup_operatore.php">Registrati</a>
     </div>
 </div>
 </body>
 </html>
+
+
+
+
+
